@@ -251,11 +251,11 @@ def parse_rich(pe):
                 "key": rich_data["key"].hex(),
                 "clear_data": {
                     "data": base64.b64encode(rich_data["clear_data"]),
-                    "md5": hashlib.md5(rich_data["clear_data"]).hexdigest(),
+                    "md5": hashlib.md5(rich_data["clear_data"], usedforsecurity=False).hexdigest(),
                 },
                 "raw_data": {
                     "data": base64.b64encode(rich_data["raw_data"]),
-                    "md5": hashlib.md5(rich_data["raw_data"]).hexdigest(),
+                    "md5": hashlib.md5(rich_data["raw_data"], usedforsecurity=False).hexdigest(),
                 },
             }
 
@@ -636,7 +636,9 @@ class ScanPe(strelka.Scanner):
                                     )
                                 except pefile.PEFormatError:
                                     continue
-                                resource_md5 = hashlib.md5(data).hexdigest()
+                                resource_md5 = hashlib.md5(
+                                    data, usedforsecurity=False
+                                ).hexdigest()
                                 resource_sha1 = hashlib.sha1(data).hexdigest()
                                 resource_sha256 = hashlib.sha256(data).hexdigest()
 
@@ -681,7 +683,9 @@ class ScanPe(strelka.Scanner):
         for sec in pe.sections:
             try:
                 name = sec.Name.rstrip(b"\x00").decode()
-                section_md5 = sec.get_hash_md5()
+                section_md5 = hashlib.md5(
+                    sec.get_data(), usedforsecurity=False
+                ).hexdigest()
                 section_sha1 = sec.get_hash_sha1()
                 section_sha256 = sec.get_hash_sha256()
 
