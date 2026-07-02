@@ -10,7 +10,7 @@ class ScanHash(strelka.Scanner):
     """Calculates file hash values."""
 
     def scan(self, data, file, options, expire_at):
-        self.event["md5"] = md5(data).hexdigest()
+        self.event["md5"] = md5(data, usedforsecurity=False).hexdigest()
         self.event["sha1"] = sha1(data).hexdigest()
         self.event["sha256"] = sha256(data).hexdigest()
         self.event["ssdeep"] = ssdeep_hash(data)

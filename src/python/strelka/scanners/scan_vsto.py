@@ -69,7 +69,8 @@ class ScanVsto(strelka.Scanner):
                                 ]["r:issuer"]["Signature"]["KeyInfo"]["X509Data"][
                                     "X509Certificate"
                                 ]
-                            )
+                            ),
+                            usedforsecurity=False,
                         ).hexdigest(),
                     }
 
