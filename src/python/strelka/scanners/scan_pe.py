@@ -276,6 +276,57 @@ def parse_rich(pe):
         return
 
 
+def get_imphash(pe):
+    """Return the imphash of the PE file.
+
+    Creates a hash based on imported symbol names and their specific order within
+    the executable:
+    https://www.mandiant.com/resources/blog/tracking-malware-import-hashing
+
+    Returns:
+        the hexdigest of the MD5 hash of the exported symbols.
+    """
+
+    impstrs = []
+    exts = ["ocx", "sys", "dll"]
+    if not hasattr(pe, "DIRECTORY_ENTRY_IMPORT"):
+        return ""
+    for entry in pe.DIRECTORY_ENTRY_IMPORT:
+        if isinstance(entry.dll, bytes):
+            libname = entry.dll.decode().lower()
+        else:
+            libname = entry.dll.lower()
+        parts = libname.rsplit(".", 1)
+
+        if len(parts) > 1 and parts[1] in exts:
+            libname = parts[0]
+
+        entry_dll_lower = entry.dll.lower()
+        for imp in entry.imports:
+            funcname = None
+            if not imp.name:
+                funcname = pefile.ordlookup.ordLookup(
+                    entry_dll_lower, imp.ordinal, make_name=True
+                )
+                if not funcname:
+                    raise pefile.PEFormatError(
+                        f"Unable to look up ordinal {entry.dll}:{imp.ordinal:04x}"
+                    )
+            else:
+                funcname = imp.name
+
+            if not funcname:
+                continue
+
+            if isinstance(funcname, bytes):
+                funcname = funcname.decode()
+            impstrs.append("%s.%s" % (libname.lower(), funcname.lower()))
+
+    return hashlib.md5(
+        ",".join(impstrs).encode(), usedforsecurity=False
+    ).hexdigest()
+
+
 def parse_certificates(data):
     # set up string io as we get data
     buffer = BytesIO()
@@ -729,7 +780,8 @@ class ScanPe(strelka.Scanner):
         }
 
         if hasattr(pe, "DIRECTORY_ENTRY_IMPORT"):
-            self.event["imphash"] = pe.get_imphash()
+            # not using pe.get_imphash() to avoid md5 digest error on FIPS systems
+            self.event["imphash"] = get_imphash(pe)
 
             for imp in pe.DIRECTORY_ENTRY_IMPORT:
                 lib = imp.dll.decode()
